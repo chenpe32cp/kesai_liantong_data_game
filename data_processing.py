@@ -7,20 +7,18 @@ Created on Sun Jul 16 21:44:06 2017
 import pandas as pd
 from collections import defaultdict
 from pandas import DataFrame
-#from sklearn.preprocessing import PolynomialFeatures
 from phone_dict_info import phone_info_map,phone_brand_map,term_brand_map
-#import gc
 
 def process(input, output,save_data = False):    
     data = pd.read_csv(input,encoding='utf-8',index_col='用户标识')    
     #获取全零的比例
-    #a=train_data==0
-    #b=a.sum()
-    #pro = b/len(train_data)
+    a=train_data==0
+    b=a.sum()
+    pro = b/len(train_data)
     
     #删除全零特征
     process1_data = data.drop(['SuningEbuy','爱奇艺动画屋','必应搜索','漫入省份'], axis = 1)
-    #填补缺失值(直接补0效果不一定好，后期考虑改进)
+    #填补缺失值(直接补0效果不一定好，可以考虑改进)
     process1_data = process1_data.fillna(0)
     
     process1_data = process1_data.loc[(process1_data['每月的大致刷卡消费次数']<30000)
@@ -224,8 +222,8 @@ def process(input, output,save_data = False):
     process1_data['地图占比'] = process1_data['地图']/(process1_data['用户安装的app个数']+1)
     process1_data['汇总占比'] = process1_data['汇总']/(process1_data['用户安装的app个数']+1)
          
-    return process1_data
+    return pro process1_data
 
-input = r"C:\competition\liantong\diyiti\data\raw_data\train_data.csv"
-output = r"C:\competition\liantong\第1题：算法题数据\data\raw_data\数据集1_用户标签_本地_训练集_process.csv"
-process_train_data = process(input, output,save_data = False)
+input = "/data/train_data.csv"
+output = "/data/train_preprocess.csv"
+pro, process_train_data = process(input, output,save_data = False)
