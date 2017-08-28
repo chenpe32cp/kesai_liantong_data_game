@@ -16,21 +16,21 @@ from sklearn.grid_search import GridSearchCV
 #from sklearn import preprocessing
 
 def load_raw_data():
-    train_data = pd.read_csv(r"C:\competition\liantong\第1题：算法题数据\data\raw_data\数据集1_用户标签_本地_训练集.csv",encoding='utf-8',index_col='用户标识')
-    test_data = pd.read_csv(r"C:\competition\liantong\第1题：算法题数据\data\raw_data\数据集1_用户标签_本地_测试集.csv",encoding='utf-8',index_col='用户标识')
-    train_label=pd.read_csv(r"C:\competition\liantong\diyiti\data\raw_data\train_label.csv",index_col='用户标识')
+    train_data = pd.read_csv("/data/数据集1_用户标签_本地_训练集.csv",encoding='utf-8',index_col='用户标识')
+    test_data = pd.read_csv("/data/数据集1_用户标签_本地_测试集.csv",encoding='utf-8',index_col='用户标识')
+    train_label=pd.read_csv("/data/train_label.csv",index_col='用户标识')
     train_label = train_label.loc[train_data.index,:]
     return  train_data, test_data, train_label
 
 def load_process_data(test_data=None):
-    process_train_data = pd.read_csv(r"C:\competition\liantong\第1题：算法题数据\data\process_data\数据集1_用户标签_本地_训练集_process.csv",encoding='utf-8',index_col='用户标识')
-    train_label=pd.read_csv(r"C:\competition\liantong\第1题：算法题数据\data\raw_data\数据集2_用户是否去过迪士尼_训练集.csv",index_col='用户标识')
+    process_train_data = pd.read_csv("/data/数据集1_用户标签_本地_训练集_process.csv",encoding='utf-8',index_col='用户标识')
+    train_label=pd.read_csv("/data/数据集2_用户是否去过迪士尼_训练集.csv",index_col='用户标识')
     if test_data == True:        
-        process_test_data = pd.read_csv(r"C:\competition\liantong\第1题：算法题数据\data\process_data\数据集1_用户标签_本地_测试集_process.csv",encoding='utf-8',index_col='用户标识')
+        process_test_data = pd.read_csv("/data/数据集1_用户标签_本地_测试集_process.csv",encoding='utf-8',index_col='用户标识')
         return process_train_data,process_test_data, train_label
     return process_train_data, train_label
 
-#def feature_standard(process_train_data,process_test_data,train_label):
+#基于树的模型，不需要进行标准化
 def feature_standard(process_train_data,train_label):
     #特征标准化
     #scaler = preprocessing.StandardScaler()
@@ -66,11 +66,11 @@ def xgb_fit(x_train,y_train,x_test,y_test):
     watchlist = [ (xg_train,'train'), (xg_test, 'test') ]
     model = xgb.train(params, xg_train, num_boost_round=5000, evals=watchlist,early_stopping_rounds=150)
     model.save_model('xgb.model') # 用于存储训练出的模型
-#    print ("best best_ntree_limit",model.best_ntree_limit)
-#    print ("跑到这里了model.predict")
-#    preds = model.predict(xg_test,ntree_limit=model.best_ntree_limit)
-#    test_recall=recall_score(y_test,preds)
-#    print(test_recall)
+    print ("best best_ntree_limit",model.best_ntree_limit)
+    print ("跑到这里了model.predict")
+    preds = model.predict(xg_test,ntree_limit=model.best_ntree_limit)
+    test_recall=recall_score(y_test,preds)
+    print(test_recall)
 
 
 #使用xgboost进行交叉训练，得到决策树数目。   
@@ -102,11 +102,8 @@ def tune_xgb_parameters(x_train,y_train,x_test,y_test):
                         colsample_bytree=0.8,objective= 'binary:logistic',nthread=4,scale_pos_weight=1,seed=27)  
     xgb_modelfit(xgb1,x_train,y_train,x_test,y_test)
 
-
-
 #使用lightgbm进行模型训练
 def lgb_fit(x_train,y_train,x_test,y_test):
-
     lgb_train = lgb.Dataset(x_train,y_train['是否去过迪士尼'])
     lgb_test = lgb.Dataset(x_test,y_test['是否去过迪士尼'])
     params={
@@ -133,7 +130,7 @@ def lgb_fit(x_train,y_train,x_test,y_test):
                     early_stopping_rounds=150,
                     categorical_feature=['性别','手机品牌','手机终端型号','手机信息']
                     )   
-    bst.save_model('lgb1.txt')
+    bst.save_model('lgb.txt')
     return bst
     
 def lgb_cv_fit(process2_data,train_label):
@@ -173,16 +170,14 @@ def result(process_test_data, ypred):
     final.columns = ['IMEI','SCORE']
     final.to_csv('result.csv',index=False)
 
-"""   
+   
 if __name__ == '__main__':
-    #process_train_data,process_test_data, 
-    train_label = load_process_data()
+    process_train_data, process_test_data, train_label = load_process_data(test_data=True)
     x_train, x_test, y_train, y_test=feature_standard(process_train_data,train_label)
     bst=lgb_fit(x_train,y_train,x_test,y_test)    
     #bst=lgb_cv_fit(process2_data,train_label)
-    ypred = bst.predict(standard_test_data, num_iteration=bst.best_iteration)
+    ypred = bst.predict(process_test_data, num_iteration=bst.best_iteration)
     result(process_test_data, ypred)
-"""
 """   
     param_test1 = {
     'max_depth':list(range(3,10,2)),
@@ -193,7 +188,5 @@ if __name__ == '__main__':
      objective= 'binary:logistic', nthread=4, scale_pos_weight=1, seed=27), 
      param_grid = param_test1, scoring='roc_auc',n_jobs=4,iid=False, cv=5)
     gsearch1.fit(x_train,y_train['是否去过迪士尼'])
-    gsearch1.grid_scores_, gsearch1.best_params_, gsearch1.best_score_
-    
-                       
+    gsearch1.grid_scores_, gsearch1.best_params_, gsearch1.best_score_                    
 """
